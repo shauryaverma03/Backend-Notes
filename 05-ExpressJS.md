@@ -1,10 +1,10 @@
-# 📗 05 — Express.js
+# 📗 05 — Express.js Framework (Partwise Guide)
 
 ---
 
 ## What is Express.js?
 
-Express is a **minimal, unopinionated web framework** for Node.js. It provides a thin layer over Node's `http` module with routing, middleware, and more.
+Express is a **minimal, unopinionated web framework** for Node.js. It provides a thin, high-performance layer over Node's built-in `http` module with routing, middleware pipeline, and template rendering.
 
 ```bash
 npm install express
@@ -12,167 +12,156 @@ npm install express
 
 ---
 
-## Basic Express Server
+# 🛠️ Partwise Breakdown of Express.js
+
+---
+
+## 📍 Part 1: Basic Express Server & Setup
 
 ```javascript
 const express = require('express');
 const app = express();
 
-// Built-in middleware to parse JSON body
+// 1. Built-in middleware to parse incoming JSON bodies
 app.use(express.json());
 
-// Built-in middleware to parse URL-encoded form data
+// 2. Built-in middleware to parse URL-encoded form data
 app.use(express.urlencoded({ extended: true }));
 
-// Routes
+// 3. Define root GET route
 app.get('/', (req, res) => {
-  res.send('Hello World!');
+  res.status(200).send('Hello, Express Server is live!');
 });
 
-// Start server
+// 4. Start listening on port
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`🚀 Server running on port ${PORT}`);
 });
 ```
 
 ---
 
-## Routing
+## 📍 Part 2: Routing Essentials (Methods, Params, Query, Body)
 
-### Basic Routes
-
+### 2.1 Route Methods & Match All
 ```javascript
-// HTTP methods
-app.get('/users', (req, res) => { /* Get all users */ });
+// HTTP Methods
+app.get('/users', (req, res) => { /* Fetch users */ });
 app.post('/users', (req, res) => { /* Create user */ });
 app.put('/users/:id', (req, res) => { /* Replace user */ });
-app.patch('/users/:id', (req, res) => { /* Update user */ });
+app.patch('/users/:id', (req, res) => { /* Partial update user */ });
 app.delete('/users/:id', (req, res) => { /* Delete user */ });
 
-// Match ALL HTTP methods
-app.all('/secret', (req, res) => {
-  res.send('Accessed via: ' + req.method);
+// Match ALL HTTP methods for a path
+app.all('/health', (req, res) => {
+  res.json({ status: 'OK', method: req.method });
 });
 ```
 
-### Route Parameters
-
+### 2.2 Route Parameters (`req.params`)
 ```javascript
-// /users/42
-app.get('/users/:id', (req, res) => {
-  console.log(req.params.id); // '42'
-  res.json({ userId: req.params.id });
-});
-
-// /users/42/posts/7
+// Route URL: /users/42/posts/7
 app.get('/users/:userId/posts/:postId', (req, res) => {
-  console.log(req.params); // { userId: '42', postId: '7' }
+  const { userId, postId } = req.params;
+  res.status(200).json({
+    userId,
+    postId,
+    message: `Fetching post ${postId} for user ${userId}`
+  });
 });
 ```
 
-### Query Parameters
-
+### 2.3 Query Parameters (`req.query`)
 ```javascript
-// /search?q=node&page=2&limit=10
+// Request URL: /search?q=node&page=2&limit=10
 app.get('/search', (req, res) => {
-  console.log(req.query.q);      // 'node'
-  console.log(req.query.page);   // '2' (always a string!)
-  console.log(req.query.limit);  // '10'
+  const query = req.query.q;            // 'node'
+  const page = req.query.page || '1';    // '2' (always string)
+  const limit = req.query.limit || '10'; // '10'
+
+  res.status(200).json({
+    query,
+    page: parseInt(page, 10),
+    limit: parseInt(limit, 10)
+  });
 });
 ```
 
-### Request Body
-
+### 2.4 Request Body Handling (`req.body`)
 ```javascript
-// POST /users with body: { "name": "John", "email": "john@mail.com" }
-app.post('/users', (req, res) => {
-  console.log(req.body.name);    // 'John'
-  console.log(req.body.email);   // 'john@mail.com'
-  res.status(201).json({ message: 'User created', user: req.body });
+// POST /api/users with JSON payload
+app.post('/api/users', (req, res) => {
+  const { name, email } = req.body;
+  if (!name || !email) {
+    return res.status(400).json({ error: 'Name and email are required' });
+  }
+
+  res.status(201).json({
+    message: 'User created successfully',
+    data: { id: Date.now(), name, email }
+  });
 });
 ```
 
 ---
 
-## The Request Object (`req`)
+## 📍 Part 3: Request (`req`) & Response (`res`) Objects Reference
 
+### 3.1 Request Object Cheat Sheet
 ```javascript
-req.params       // Route parameters  → { id: '42' }
-req.query        // Query string      → { page: '2', limit: '10' }
-req.body         // Request body      → { name: 'John' }
-req.headers      // Request headers   → { 'content-type': 'application/json' }
-req.method       // HTTP method       → 'GET'
-req.url          // Full URL path     → '/users?page=2'
-req.path         // URL path only     → '/users'
-req.ip           // Client IP address
-req.hostname     // Hostname          → 'localhost'
-req.protocol     // 'http' or 'https'
-req.cookies      // Parsed cookies (needs cookie-parser middleware)
-req.get('Content-Type')  // Get specific header
+req.params        // Route parameters   → { id: '42' }
+req.query         // Query parameters   → { page: '2', limit: '10' }
+req.body          // Request body payload → { name: 'John' }
+req.headers       // Request headers    → { 'content-type': 'application/json' }
+req.method        // HTTP method        → 'GET'
+req.path          // Path portion       → '/users'
+req.ip            // Client IP address
+req.get('Header') // Helper to get header case-insensitively
+```
+
+### 3.2 Response Object Cheat Sheet
+```javascript
+res.send('Text')                       // Send plain text or HTML
+res.json({ success: true })            // Send JSON response
+res.status(201).json({ data: user })   // Set HTTP status code + send JSON
+res.sendStatus(204)                    // Send status with default text
+res.redirect('/login')                 // Perform 302 redirect
+res.set('X-Custom-Header', 'Value')   // Set custom response header
+res.sendFile('/absolute/path/file.pdf')// Send file directly
 ```
 
 ---
 
-## The Response Object (`res`)
+## 📍 Part 4: Express Router (Modular Architecture)
 
-```javascript
-// Send response
-res.send('Hello');                       // Send string (auto Content-Type)
-res.json({ name: 'John' });             // Send JSON
-res.status(201).json({ id: 1 });         // Status + JSON
-res.sendStatus(204);                     // Send just the status
+Separate routes into clean, maintainable module files using `express.Router()`.
 
-// Redirect
-res.redirect('/login');                  // 302 redirect
-res.redirect(301, '/new-url');           // 301 permanent redirect
-
-// Set headers
-res.set('X-Custom-Header', 'value');
-res.cookie('name', 'value', { httpOnly: true });
-
-// Send file
-res.sendFile('/absolute/path/to/file.html');
-res.download('/path/to/file.pdf');       // Prompt download
-
-// Render template (with view engine)
-res.render('index', { title: 'Home' });
-```
-
----
-
-## Express Router (Modular Routing)
-
-Organize routes into separate files:
-
+### 4.1 Define Modular Router
 ```javascript
 // routes/userRoutes.js
 const express = require('express');
 const router = express.Router();
 
+// GET /api/users
 router.get('/', (req, res) => {
-  res.json({ users: [] });
+  res.json({ success: true, users: [] });
 });
 
+// GET /api/users/:id
 router.get('/:id', (req, res) => {
-  res.json({ user: { id: req.params.id } });
+  res.json({ success: true, userId: req.params.id });
 });
 
+// POST /api/users
 router.post('/', (req, res) => {
-  res.status(201).json({ message: 'User created' });
-});
-
-router.put('/:id', (req, res) => {
-  res.json({ message: 'User updated' });
-});
-
-router.delete('/:id', (req, res) => {
-  res.json({ message: 'User deleted' });
+  res.status(201).json({ success: true, message: 'User created' });
 });
 
 module.exports = router;
 ```
 
+### 4.2 Mount Router in Main Application
 ```javascript
 // app.js
 const express = require('express');
@@ -181,158 +170,84 @@ const userRoutes = require('./routes/userRoutes');
 const app = express();
 app.use(express.json());
 
-// Mount router at /api/users
+// Mount user router under /api/users
 app.use('/api/users', userRoutes);
-// Now: GET /api/users, GET /api/users/:id, POST /api/users, etc.
 
 app.listen(3000);
 ```
 
 ---
 
-## Route Chaining
+## 📍 Part 5: Serving Static Files & View Engines (SSR)
 
+### 5.1 Static Files Middleware
 ```javascript
-router.route('/users')
-  .get((req, res) => { /* get all */ })
-  .post((req, res) => { /* create */ });
-
-router.route('/users/:id')
-  .get((req, res) => { /* get one */ })
-  .put((req, res) => { /* update */ })
-  .delete((req, res) => { /* delete */ });
-```
-
----
-
-## Serving Static Files
-
-```javascript
-// Serve files from "public" directory
+// Serve static assets from 'public' directory
 app.use(express.static('public'));
-// Now: /images/logo.png → public/images/logo.png
-// Now: /css/style.css   → public/css/style.css
 
-// With virtual path prefix
+// Virtual path prefix: http://localhost:3000/static/images/logo.png
 app.use('/static', express.static('public'));
-// Now: /static/images/logo.png → public/images/logo.png
-
-// Multiple directories
-app.use(express.static('public'));
-app.use(express.static('uploads'));
 ```
 
----
-
-## View Engines (Server-Side Rendering)
-
-```bash
-npm install ejs
-```
-
+### 5.2 Server-Side Rendering with EJS
 ```javascript
 // app.js
 app.set('view engine', 'ejs');
-app.set('views', './views');  // Directory for templates
+app.set('views', './views');
 
-app.get('/', (req, res) => {
-  res.render('index', {
-    title: 'Home',
-    users: ['John', 'Jane'],
+app.get('/dashboard', (req, res) => {
+  res.render('dashboard', {
+    user: 'Alice',
+    notifications: ['New message', 'System update']
   });
 });
 ```
 
-```html
-<!-- views/index.ejs -->
-<!DOCTYPE html>
-<html>
-<head><title><%= title %></title></head>
-<body>
-  <h1><%= title %></h1>
-  <ul>
-    <% users.forEach(user => { %>
-      <li><%= user %></li>
-    <% }); %>
-  </ul>
-</body>
-</html>
-```
-
-### EJS Tags
-```
-<%= variable %>      Output escaped HTML (safe)
-<%- variable %>      Output unescaped HTML (dangerous — XSS risk)
-<% code %>           Execute JS (no output)
-<%# comment %>       Comment (not rendered)
-<%- include('partial') %>  Include another template
-```
-
 ---
 
-## Project Structure (MVC Pattern)
+## 📍 Part 6: Enterprise MVC Architecture & App/Server Separation
 
+### 6.1 Clean MVC Directory Layout
 ```
 project/
-├── config/
-│   └── db.js              # Database connection
-├── controllers/
-│   ├── userController.js  # Business logic
-│   └── authController.js
-├── middleware/
-│   ├── auth.js            # Auth middleware
-│   └── errorHandler.js    # Error handling
-├── models/
-│   ├── User.js            # Database schema/model
-│   └── Post.js
-├── routes/
-│   ├── userRoutes.js      # Route definitions
-│   └── authRoutes.js
-├── utils/
-│   └── helpers.js         # Utility functions
-├── views/                 # Templates (if using SSR)
-├── public/                # Static files
-├── .env                   # Environment variables
-├── .gitignore
-├── package.json
-├── app.js                 # Express app setup
-└── server.js              # Server entry point
+├── config/           # Database & environment configuration
+├── controllers/      # Route logic & request processors
+├── middleware/       # Custom auth & error handling middlewares
+├── models/           # Database schemas
+├── routes/           # Express router endpoints
+├── utils/            # Utility helpers
+├── app.js            # Express app setup (Exportable for Supertest)
+└── server.js         # Server entry point (starts app.listen)
 ```
 
-### Separating App and Server
-
+### 6.2 Separating `app.js` and `server.js`
 ```javascript
-// app.js — Express setup (exportable for testing)
+// app.js (Express configuration)
 const express = require('express');
 const app = express();
 
 app.use(express.json());
-// ... routes, middleware
+app.use('/api/users', require('./routes/userRoutes'));
 
 module.exports = app;
 ```
 
 ```javascript
-// server.js — Entry point (starts the server)
+// server.js (Application Bootstrap)
 const app = require('./app');
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`Server executing on port ${PORT}`);
 });
 ```
 
 ---
 
-## 🎯 Interview Tips
-
-> **Q: What is Express.js and why use it?**
-> Express is a minimal web framework for Node.js. It simplifies routing, middleware, request/response handling, and building APIs compared to raw `http` module.
+## 🎯 Interview Questions & Key Takeaways
 
 > **Q: What is the difference between `app.use()` and `app.get()`?**
-> `app.use()` matches ANY HTTP method and also matches sub-paths (e.g., `/api` matches `/api/users`). `app.get()` only matches GET requests to the exact path.
+> `app.use()` matches ALL HTTP methods and matches prefix paths (`/api` matches `/api/users`), whereas `app.get()` matches ONLY GET requests to that exact path.
 
 > **Q: Difference between `res.send()` and `res.json()`?**
-> `res.json()` converts the argument to JSON and sets `Content-Type: application/json`. `res.send()` auto-detects the type — objects become JSON, strings become HTML.
-
----
+> `res.json()` explicitly converts data to JSON and sets `Content-Type: application/json`. `res.send()` auto-inspects the data type (string to HTML, object to JSON).
